@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="shortcut icon"
+    href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>Simulator Tool</title>
+
+
+    <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+
+
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <nav>
+                <ul class="nav nav-pills pull-right">
+                    <li role="presentation" class="active"><a href="/">Home</a>
+                    </li>
+                    <!--
+                    <li role="presentation"><a href="showSignUp">Sign Up</a> -->
+                    </li>
+                </ul>
+            </nav>
+            <h3 class="text-muted">Python Simulation Tool</h3>
+        </div>
+
+        <div class="container ">
+            <ul class="nav nav-pills pull-center">
+                <a href="/SimulateTripCreationForDriver" class="btn btn-success btn-lg active" role="button">Simulate Trip Creation for driver</a>
+                <br /><br />
+                <a href="/deploy" class="btn btn-danger btn-lg " role="button">Production Deployment</a>
+                <br /><br />
+                <a href="/tripSimulationScreen" class="btn btn-success btn-lg active" role="button">TripSimulation</a>
+                <br /><br />
+                <a href="/CurrentSimulationStatus" class="btn btn-success btn-lg active" role="button">Current Simulation Stats</a>
+                <br /><br /><br />
+            </ul>
+        </div>
+
+
+        <footer class="footer">
+            <p>&copy; Shuttl 2015</p>
+        </footer>
+
+    </div>
+</body>
+
+</html>

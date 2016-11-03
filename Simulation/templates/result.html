@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="shortcut icon"
+    href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>Simulator Tool</title>
+
+
+    <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+
+
+</head>
+<script>
+    var driverid = '{{ result[0] }}';
+</script>
+<body>
+    <div class="container">
+        <div class="header">
+            <nav>
+                <ul class="nav nav-pills pull-right">
+                    <li role="presentation" class="active"><a href="/">Home</a>
+                    </li>
+                    <!--
+                    <li role="presentation"><a href="showSignUp">Sign Up</a> -->
+                    </li>
+                </ul>
+            </nav>
+            <h3 class="text-muted">Python Simulation Tool</h3>
+        </div>
+
+        <div class="row ">
+            <ul class="nav nav-pills pull-center">
+              <div class="col-xs-12 col-sm-6 col-md-8">driver Id</div>
+              <div class="col-xs-6 col-md-4">{{ result[0] }}</div>
+                <div class="col-xs-12 col-sm-6 col-md-8">Route Id</div>
+                <div class="col-xs-6 col-md-4">{{ result[1] }}</div>
+                <div class="col-xs-12 col-sm-6 col-md-8">Trip Id</div>
+              <div class="col-xs-6 col-md-4">{{ result[2] }}</div>
+            </ul>
+        </div>
+
+
+        <footer class="footer">
+            <p>&copy; Shuttl 2015</p>
+        </footer>
+
+    </div>
+</body>
+</html>
