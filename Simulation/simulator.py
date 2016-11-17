@@ -2,6 +2,7 @@ import optparse
 import sys
 import MySQLdb
 import datetime
+import collections
 import re
 import simulateGPS
 import time
@@ -44,7 +45,8 @@ def getRandomIds(type, Path='./Ids.txt'):
     return drivers[randint(0, len(drivers))]
 
 
-def DriverTripAllocation(driverId, routeId, time,env):
+
+def DriverTripAllocation(driverId, routeId, time,env,eta=None):
 
     # Set Env
     env = environment.getEnv(env)
@@ -54,10 +56,9 @@ def DriverTripAllocation(driverId, routeId, time,env):
     from redis.sentinel import Sentinel
     import redis
 
-
-    print env.redisIp
-    print env.redisPort
-    print "Environment : %s " % env
+    log.info( env.redisIp)
+    log.info( env.redisPort)
+    log.info( "Environment : %s " % env)
     if str(env).lower() == 'environment.docker' :
         redisIp = '172.31.16.88'
         redisPort = '32772'
@@ -66,9 +67,8 @@ def DriverTripAllocation(driverId, routeId, time,env):
         redisIp = r.sentinel_master('mymaster')['ip']
         redisPort = r.sentinel_master('mymaster')['port']
 
-
-    print redisIp
-    print redisPort
+    log.info(redisIp)
+    log.info( redisPort)
     POOL = redis.ConnectionPool(host=redisIp
                                 , port=redisPort, db=0)
     my_server = redis.Redis(connection_pool=POOL)
@@ -90,7 +90,7 @@ def DriverTripAllocation(driverId, routeId, time,env):
     routes = response["data"]["allowedRoutes"].split(',')
     routes = map(lambda x: int(x), routes)
     routeId = int(routeId)
-    log.info( "Routes connected to Driver : %s" % routes)
+    log.info( "Routes connected to Driverid %s : %s" % (driverId,routes))
     log.info( "Route on which trip needs to run : %s" % routeId)
     if routeId in routes:
         log.info( "Driver already connected to this route, moving ahead")
@@ -124,7 +124,7 @@ def DriverTripAllocation(driverId, routeId, time,env):
     for i in ids:
         temp.append(i[0])
     ids = temp[:]
-    db = MySQLdb.connect(host=env.dbIp, user=env.dbUser,
+    db = MySQLdb.connect(host=env.rmsDB, user=env.dbUser,
                          passwd=env.dbPassword, db='RMS')
     cursor = db.cursor()
     cursor.execute('''SELECT ID FROM LANDMARKS WHERE ID IN (SELECT LANDMARK_ID FROM ROUTE_STOP_MAPPINGS WHERE ROUTE_ID=%s AND DELETED=0);'''% routeId)
@@ -195,10 +195,48 @@ def DriverTripAllocation(driverId, routeId, time,env):
 
 
     requests.get(env.driverServer+'/updateReportingFlag?driverIds=%s' % driverId)
+
     payload = "driver_id=%s&lng=%s&accuracy=56.0&provider=gps&lat=%s&language=en" % (driverId,lng,lat)
     response = requests.post(env.driverServer + 'publishGps', data=payload,
                              headers=HEADER.url_encoded).json()
-    print "Publish GPS response : %s " % response
+    log.info("Publish GPS response : %s " % response)
+
+    key = my_server.get("eta_driver_%s" % driverId)
+    log.info("ETA Driver for %s : %s " % (driverId,key))
+    import time as T1
+    if eta :
+        log.info("ETA creation is enabled. Creating static ETA for trip : %s" % tripid)
+        key =  []
+        key.append(int(driverId))
+        key.append(lat)
+        key.append(lng)
+        key.append(0)
+        now_now_time = int(T1.time())+time*60
+        key.append(now_now_time)
+        D1 = collections.OrderedDict()
+        db = MySQLdb.connect(host=env.rmsDB, user=env.dbUser,
+                             passwd=env.dbPassword, db='RMS')
+        cursor = db.cursor()
+        cursor.execute('''SELECT ID,LATITUDE,LONGITUDE FROM LANDMARKS WHERE ID IN(SELECT LANDMARK_ID FROM ROUTE_STOP_MAPPINGS
+                WHERE ROUTE_ID = %s AND DELETED = 0 );''' % routeId)
+        all_data = cursor.fetchmany(50000)
+        COUNTER = 0
+        for id,lat,lng in all_data:
+        #    if not COUNTER:
+        #        COUNTER += 1
+        #    else :
+                D1[id] = now_now_time + COUNTER*5
+                COUNTER+=1
+        key.append(D1)
+        key.append(0)
+        key.append({})
+        key = makeJson(key)
+        key = "%s" % key
+        key = key.replace(' ','')
+        log.info( "Made eta Key : %s" % key)
+        my_server.set("eta_driver_%s" % driverId,key)
+
+
     return tripid
 
 
@@ -230,7 +268,7 @@ def optionParser():
 
     else:
         if 'DriverTripAllocationAndSimulation' in parse.type:
-            print "Under Construction. Comming soon in version 2.0 :)"
+            log.info("Under Construction. Comming soon in version 2.0 :)")
             sys.exit(0)
         if not parse.time:
             print "Mandatory field time missing. Please enter time offset"
@@ -245,10 +283,10 @@ def main():
 
     if None in (driverId, routeId, time):
         if driverId == None:
-            print "No Driver Id specified. Using random driver Id "
+            log.info("No Driver Id specified. Using random driver Id ")
             drivers = getRandomIds('driver')
         elif routeId == None:
-            print "No Route Id specified. Using random Route Id "
+            log.info("No Route Id specified. Using random Route Id ")
             route = getRandomIds('route')
 
     if type.lower() == 'DriverTripAllocation'.lower():
@@ -284,13 +322,13 @@ def startSimulation(driverId,routeId,tripId,time,env,oldTrip=None,random=False,f
     payload = {'driver_id':driverId, 'language':'en', 'appVersion':344}
     payload = makeEncoded(payload)
     response = requests.post(env.driverServer+'getDriverVehiclesDetails',data = payload,headers = HEADER.url_encoded).json()
-    print "List of Vehicles enlisted :"
+    log.info("List of Vehicles enlisted :")
     for item in response['data']['vehicleList']:
-        print '\t%s' % item['vehiclePlateNumber']
-    print response
+        log.info('\t%s' % item['vehiclePlateNumber'])
+    log.info(response)
     vehicleId = response['data']['vehicleList'][0]['vehicleId']
     driverName = response['data']['name'].split(' ')[0]
-    print "VehicleId : %s\nDriverName : %s " % ( vehicleId,driverName)
+    log.info("VehicleId : %s\nDriverName : %s " % ( vehicleId,driverName))
     #print response
     payload = {
         "driverId":driverId,
@@ -299,48 +337,48 @@ def startSimulation(driverId,routeId,tripId,time,env,oldTrip=None,random=False,f
     }
     payload = makeJson(payload)
     response = requests.post(env.driverServer+'getVehicleLocationAndDistance',data=payload,headers = HEADER.json_headers).json()
-    print "TTTTTTTT : %s " % response
-    print "Current Location : %s,%s" %(response['data']['vehicleLocation']['lat'],response['data']['vehicleLocation']['lng'])
+    log.info("TTTTTTTT : %s " % response)
+    log.info("Current Location : %s,%s" %(response['data']['vehicleLocation']['lat'],response['data']['vehicleLocation']['lng']))
 
     payload = "driver_id=%s&language=en&appVersion=351&" \
               "name=%s&vehicleId=%s&ivrCall=1&imei=%s" %(driverId,driverName,vehicleId,imei)
     response = requests.post(env.driverServer+'driverConfirmationCall',data=payload,headers = HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351&routeId=%s" %(driverId,routeId)
     response = requests.post(env.driverServer + 'getDriverPersonalDetails', data=payload,
                              headers=HEADER.url_encoded).json()
 
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en" % driverId
     response = requests.post(env.driverServer + 'getSchedule', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351" % driverId
     response = requests.post(env.driverServer + 'getReportDetails', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351" % driverId
     response = requests.post(env.driverServer + 'reachByCallOfDriver', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
     payload = "driver_id=%s" % driverId
     response = requests.post(env.driverServer + 'getRouteInformation', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351&routeId=%s" % (driverId,routeId)
     response = requests.post(env.driverServer + 'getAllPickUpPointsForRouteId', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&tripId=%s&appVersion=351" % (driverId,tripId)
     response = requests.post(env.driverServer + 'allowBoarding', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
 
 
@@ -348,12 +386,12 @@ def startSimulation(driverId,routeId,tripId,time,env,oldTrip=None,random=False,f
     response = requests.post(env.driverServer + 'getRoutePointsForRoute', data=payload,
                              headers=HEADER.url_encoded).json()
 
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351&tripId=%s&routeId=%s" % ( driverId,tripId,routeId)
     response = requests.post(env.driverServer + 'getBookingsForTrip', data=payload,
                              headers=HEADER.url_encoded).json()
-    print response
+    log.info(response)
 
     payload = "driver_id=%s&language=en&appVersion=351&tripId=%s&startedTime=0&startedLat=0&startedLng=0&="\
               % ( driverId,tripId)

@@ -4,7 +4,7 @@ import time
 import MySQLdb
 import requests
 import random
-
+from logger import log
 
 class HEADER(object):
     json_headers = {'content-type': "application/json"
@@ -61,10 +61,10 @@ class simulatorClass(object):
                   % (self._driver, endTime, self._TripIdForStoppingTrip)
         response = requests.post(self._env.driverServer + 'storeDriverEndTripTime', data=payload,
                                  headers=HEADER.url_encoded).json()
-        print response
+        log.info(response)
 
     def runOldTrip(self):
-        print "Running Old Trip : %s" % self._trip
+        log.info("Running Old Trip : %s" % self._trip)
         db = MySQLdb.connect(host=environment.prod.dbIp, user=environment.prod.dbUser,
                              passwd=environment.prod.dbPassword, db='shuttl')
         cursor = db.cursor()
@@ -85,17 +85,17 @@ class simulatorClass(object):
                 payload = "driver_id=%s&lng=%s&accuracy=56.0&provider=gps&lat=%s&language=en" % (self._driver, lng, lat)
                 response = requests.post(env.driverServer + 'publishGps', data=payload,
                                          headers=HEADER.url_encoded).json()
-                print response
-                print timestamp
+                log.info(response)
+                log.info(timestamp)
                 oldTime = time.mktime(time.strptime(str(timestamp), "%Y-%m-%d %H:%M:%S"))
             else:
                 newTime = time.mktime(time.strptime(str(timestamp), "%Y-%m-%d %H:%M:%S"))
-                print "Sleeping for %s sec(s)" % (newTime-oldTime)
+                log.info("Sleeping for %s sec(s)" % (newTime-oldTime))
                 time.sleep(newTime-oldTime)
                 payload = "driver_id=%s&lng=%s&accuracy=56.0&provider=gps&lat=%s&language=en" % (self._driver, lng, lat)
                 response = requests.post(env.driverServer + 'publishGps', data=payload,
                                          headers=HEADER.url_encoded).json()
-                print response
+                log.info(response)
                 oldTime = newTime
             count += 1
             FH = open('./Thread_Status/%s' % self._thread, 'w')
@@ -104,8 +104,8 @@ class simulatorClass(object):
         return lat,lng
 
     def runNewTrip(self):
-        print "New Trip Simulation :)"
-        print "self._variation : %s " % self._variation
+        log.info("New Trip Simulation :)")
+        log.info("self._variation : %s " % self._variation)
         db = MySQLdb.connect(host=environment.prod.dbIp, user=environment.prod.dbUser,
                              passwd=environment.prod.dbPassword, db='RMS')
         cursor = db.cursor()
@@ -114,7 +114,7 @@ class simulatorClass(object):
         totalGPS = len(gpsCordinates)
         count = 0
         if self._variation == True :
-            print "This is a random test. TIUoooo TIUoooo "
+            log.info("This is a random test. TIUoooo TIUoooo ")
             for lat, lng in gpsCordinates:
                 maxTime =int(random.random()*10)
                 for i in range(maxTime):
@@ -124,7 +124,7 @@ class simulatorClass(object):
                             self._driver, lng, lat)
                     response = requests.post(env.driverServer + 'publishGps', data=payload,
                                              headers=HEADER.url_encoded).json()
-                    print response
+                    log.info(response)
                 count += 1
                 FH = open('./Thread_Status/%s' % self._thread, 'w')
                 FH.write('%s' % float((float(count) / totalGPS) * 100))
@@ -137,7 +137,7 @@ class simulatorClass(object):
                     self._driver, lng, lat)
                 response = requests.post(env.driverServer + 'publishGps', data=payload,
                                          headers=HEADER.url_encoded).json()
-                print response
+                log.info(response)
                 count += 1
                 FH = open('./Thread_Status/%s' % self._thread, 'w')
                 FH.write('%s' % float((float(count) / totalGPS) * 100))

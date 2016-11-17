@@ -33,7 +33,7 @@
         </div>
 
 
-        <form id='registration' action="/tripSimulation" method="post">
+        <form id='registration' name="submit" action="/tripSimulation" method="post" onsubmit="return validateForm()">
             <div class="form-group">
                 <label for="driverIds">Driver Ids</label>
                 <input name="driverIds" type="number" min="0" class="form-control" id="driverIds" placeholder="Driver Ids">
@@ -61,6 +61,13 @@
                 </label>
             </div>
 
+            <div class="form-group">
+                <label class="radio">
+                <input name="eta" type="checkbox" id="eta">
+                    Create ETA
+                </label>
+            </div>
+
             <div class="radio">
                 <label>
                     <input type="radio" name="optionsRadios" id="options1" value="QA" >QA Environment
@@ -83,6 +90,34 @@
 
     </div>
 <script>
+
+    function validateForm() {
+    var driver = document.forms["submit"]["driverIds"].value;
+    var route = document.forms["submit"]["routeIds"].value;
+    var env = document.forms["submit"]["optionsRadios"].value;
+    var oldTrip = document.forms["submit"]["oldTrip"].value;
+    var frequency = document.forms["submit"]["frequency"].value;
+
+
+    if (driver == null || driver == "") {
+        alert("Driver Id Must be provided!");
+        return false;
+    }
+    else if (route == null || route == "") {
+        alert("Route Id Must be provided!");
+        return false;
+    }
+
+    else if (env == null || env == "") {
+        alert("Enviroment Must be provided!");
+        return false;
+    }
+    else if ( (frequency == null || frequency == "") && (oldTrip == null || oldTrip == "") ) {
+        alert("If old Trip is not provided please provide frequency");
+        return false;
+    }
+}
+
     $('#oldTrip').on('keyup', function(){
         var value = $(this).val();
         var frequency = $('#frequency').closest('div');
@@ -96,6 +131,10 @@
             $(random).fadeOut();
         }
     });
+
+
+
+
 </script>
 </body>
 

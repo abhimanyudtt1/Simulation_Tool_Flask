@@ -31,7 +31,7 @@
         </div>
 
 
-        <form id='registration' action="/runDriverSimulation" method="post">
+        <form id='registration' name="submit" action="/runDriverSimulation" method="post" onsubmit="return validateForm()">
             <div class="form-group">
                 <label for="driverIds">Driver Ids</label>
                 <input name="driverIds" type="text" class="form-control" id="driverIds" placeholder="Driver Ids">
@@ -44,6 +44,14 @@
                 <label for="routeIds">Time (min)</label>
                 <input name="Time" type="text" class="form-control" id="Time" placeholder="Time offset for the future">
             </div>
+
+            <div class="form-group">
+                <label class="radio">
+                <input name="eta" type="checkbox" id="eta">
+                    Create ETA
+                </label>
+            </div>
+
             <div class="radio">
                 <label>
                     <input type="radio" name="optionsRadios" id="options1" value="QA" >QA Environment
@@ -65,6 +73,30 @@
         </footer>
 
     </div>
+<script>
+    function validateForm() {
+    var driver = document.forms["submit"]["driverIds"].value;
+    var route = document.forms["submit"]["routeIds"].value;
+    var time = document.forms["submit"]["Time"].value;
+    var env = document.forms["submit"]["optionsRadios"].value;
+    if (driver == null || driver == "") {
+        alert("Driver Id Must be provided!");
+        return false;
+    }
+    else if (route == null || route == "") {
+        alert("Route Id Must be provided!");
+        return false;
+    }
+    else if (time == null || time == "") {
+        alert("Time Must be provided!");
+        return false;
+    }
+    else if (env == null || env == "") {
+        alert("Enviroment Must be provided!");
+        return false;
+    }
+}
+</script>
 </body>
 
 </html>
